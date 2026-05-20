@@ -315,35 +315,39 @@ function closeModal() {
 
 // ==================== NAVIGASI ====================
 function navigateTo(page) {
-    const pages = ["dashboardPage", "jobdeskPage", "timelinePage", "anggotaPage"];
-    for (let i = 0; i < pages.length; i++) {
-        const el = document.getElementById(pages[i]);
-        if (el) el.style.display = "none";
-    }
+    const dashboardPage = document.getElementById("dashboardPage");
+    const jobdeskPage = document.getElementById("jobdeskPage");
+    const timelinePage = document.getElementById("timelinePage");
+    const anggotaPage = document.getElementById("anggotaPage");
+    
+    if (dashboardPage) dashboardPage.style.display = "none";
+    if (jobdeskPage) jobdeskPage.style.display = "none";
+    if (timelinePage) timelinePage.style.display = "none";
+    if (anggotaPage) anggotaPage.style.display = "none";
     
     const title = document.getElementById("pageTitle");
     const subtitle = document.getElementById("pageSubtitle");
     
     if (page === "dashboard") {
-        document.getElementById("dashboardPage").style.display = "block";
-        title.innerText = "Dashboard";
-        subtitle.innerText = "Kelola jobdesk dan rencana kerja";
+        if (dashboardPage) dashboardPage.style.display = "block";
+        if (title) title.innerText = "Dashboard";
+        if (subtitle) subtitle.innerText = "Kelola jobdesk dan rencana kerja";
         renderRencanaKerja();
         updateStats();
     } else if (page === "jobdesk") {
-        document.getElementById("jobdeskPage").style.display = "block";
-        title.innerText = "Jobdesk";
-        subtitle.innerText = "Daftar semua tugas tim";
+        if (jobdeskPage) jobdeskPage.style.display = "block";
+        if (title) title.innerText = "Jobdesk";
+        if (subtitle) subtitle.innerText = "Daftar semua tugas tim";
         renderFullJobdesk();
     } else if (page === "timeline") {
-        document.getElementById("timelinePage").style.display = "block";
-        title.innerText = "Timeline";
-        subtitle.innerText = "Rencana pekerjaan per minggu (M8-M14)";
+        if (timelinePage) timelinePage.style.display = "block";
+        if (title) title.innerText = "Timeline";
+        if (subtitle) subtitle.innerText = "Rencana pekerjaan per minggu (M8-M14)";
         renderTimelinePage();
     } else if (page === "anggota") {
-        document.getElementById("anggotaPage").style.display = "block";
-        title.innerText = "Anggota";
-        subtitle.innerText = "Daftar anggota tim";
+        if (anggotaPage) anggotaPage.style.display = "block";
+        if (title) title.innerText = "Anggota";
+        if (subtitle) subtitle.innerText = "Daftar anggota tim";
         renderAnggota();
     }
     
@@ -386,13 +390,15 @@ document.addEventListener("DOMContentLoaded", function() {
         if (e.target === document.getElementById("noteModal")) closeModal();
     });
     
-    document.querySelectorAll(".nav-item").forEach(function(item) {
+    const navItems = document.querySelectorAll(".nav-item");
+    for (let i = 0; i < navItems.length; i++) {
+        const item = navItems[i];
         item.addEventListener("click", function(e) {
             e.preventDefault();
-            const page = item.getAttribute("data-page");
+            const page = this.getAttribute("data-page");
             if (page) navigateTo(page);
         });
-    });
+    }
     
     setInterval(updateDeadline, 3600000);
     
