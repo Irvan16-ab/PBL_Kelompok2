@@ -1,7 +1,6 @@
 // ==================== DATA ====================
 let jobdeskData = [];
 let rencanaKerja = { m8: "", m9: "", m10: "", m11: "", m12: "", m13: "", m14: "" };
-let unsubscribeJobdesk = null;
 
 // ==================== DEADLINE ====================
 function hitungSisaHari() {
@@ -21,122 +20,41 @@ function updateDeadline() {
     }
 }
 
-function saveRencanaKerja() {
+function saveData() {
+    localStorage.setItem("pbl_jobdesk_data", JSON.stringify(jobdeskData));
     localStorage.setItem("pbl_rencana_kerja", JSON.stringify(rencanaKerja));
 }
 
-function loadRencanaKerja() {
-    const stored = localStorage.getItem("pbl_rencana_kerja");
+function loadData() {
+    const stored = localStorage.getItem("pbl_jobdesk_data");
     if (stored) {
-        rencanaKerja = JSON.parse(stored);
+        jobdeskData = JSON.parse(stored);
+    } else {
+        jobdeskData = [
+            { id: 1, nama: "Pengolahan Peta Batimetri", detail: "Digitasi dan koreksi pasang surut", pic: ["Joana", "Anju", "Nadia"], catatan: "" }
+        ];
+        saveData();
+    }
+    
+    const storedRencana = localStorage.getItem("pbl_rencana_kerja");
+    if (storedRencana) {
+        rencanaKerja = JSON.parse(storedRencana);
     }
 }
 
-// ==================== FIRESTORE ====================
-function listenJobdesk() {
-    if (unsubscribeJobdesk) unsubscribeJobdesk();
-    
-    const jobdeskCollection = window.collection(window.db, "jobdesk");
-    
-    unsubscribeJobdesk = window.onSnapshot(jobdeskCollection, (snapshot) => {
-        jobdeskData = [];
-        snapshot.forEach((doc) => {
-            jobdeskData.push({ id: doc.id, ...doc.data() });
-        });
-        jobdeskData.sort((a, b) => a.nama?.localeCompare(b.nama) || 0);
-        
-        renderFullJobdesk();
-        renderAnggota();
-        updateStats();
-        console.log("Data dari Firebase:", jobdeskData.length, "jobdesk");
-    }, (error) => {
-        console.error("Error:", error);
-    });
-}
-
-// ==================== CRUD FIREBASE ====================
-async function tambahJobdesk() {
-    const picInput = document.getElementById("namaAnggota")?.value.trim();
-    const jenis = document.getElementById("jenisPekerjaan")?.value.trim();
-    const detail = document.getElementById("detailTugas")?.value.trim();
-    
-    if (!picInput || !jenis || !detail) {
-        alert("Harap isi semua field!");
-        return;
-    }
-    
-    try {
-        await window.addDoc(window.collection(window.db, "jobdesk"), {
-            nama: jenis,
-            detail: detail,
-            pic: picInput.split(",").map(p => p.trim()),
-            catatan: "",
-            createdAt: new Date().toISOString()
-        });
-        document.getElementById("namaAnggota").value = "";
-        document.getElementById("jenisPekerjaan").value = "";
-        document.getElementById("detailTugas").value = "";
-        alert("Jobdesk berhasil ditambahkan!");
-    } catch (error) {
-        console.error(error);
-        alert("Gagal menambahkan jobdesk!");
-    }
-}
-
-async function editJob(jobId) {
-    const job = jobdeskData.find(j => j.id === jobId);
-    if (!job) return;
-    
-    const newNama = prompt("Edit Jobdesk:", job.nama);
-    if (!newNama?.trim()) return;
-    const newDetail = prompt("Edit Detail Tugas:", job.detail);
-    if (!newDetail?.trim()) return;
-    const newPic = prompt("Edit PIC (pisah koma):", job.pic.join(", "));
-    if (!newPic?.trim()) return;
-    
-    try {
-        const jobRef = window.doc(window.db, "jobdesk", jobId);
-        await window.updateDoc(jobRef, {
-            nama: newNama,
-            detail: newDetail,
-            pic: newPic.split(",").map(p => p.trim())
-        });
-        alert("Jobdesk berhasil diperbarui!");
-    } catch (error) {
-        console.error(error);
-        alert("Gagal memperbarui jobdesk!");
-    }
-}
-
-async function deleteJob(jobId) {
-    const job = jobdeskData.find(j => j.id === jobId);
-    if (!confirm(`Hapus jobdesk "${job?.nama}"?`)) return;
-    
-    try {
-        const jobRef = window.doc(window.db, "jobdesk", jobId);
-        await window.deleteDoc(jobRef);
-        alert("Jobdesk berhasil dihapus!");
-    } catch (error) {
-        console.error(error);
-        alert("Gagal menghapus jobdesk!");
-    }
-}
-
-async function saveNoteFromModal() {
-    if (window.currentNoteId) {
-        try {
-            const jobRef = window.doc(window.db, "jobdesk", window.currentNoteId);
-            await window.updateDoc(jobRef, { catatan: document.getElementById("noteText").value });
-            alert("Catatan berhasil disimpan!");
-            closeModal();
-        } catch (error) {
-            console.error(error);
-            alert("Gagal menyimpan catatan!");
+// ==================== STATS ====================
+function updateStats() {
+    const anggotaSet = new Set();
+    for (let i = 0; i < jobdeskData.length; i++) {
+        for (let j = 0; j < jobdeskData[i].pic.length; j++) {
+            anggotaSet.add(jobdeskData[i].pic[j].trim());
         }
     }
+    document.getElementById("totalAnggota").innerText = anggotaSet.size;
+    document.getElementById("totalJob").innerText = jobdeskData.length;
 }
 
-// ==================== RENDER FUNCTIONS ====================
+// ==================== RENCANA KERJA ====================
 function renderRencanaKerja() {
     const container = document.getElementById("rencanaContainer");
     if (!container) return;
@@ -146,13 +64,17 @@ function renderRencanaKerja() {
     
     let html = "";
     for (let i = 0; i < mingguList.length; i++) {
+        const minggu = mingguList[i];
+        const mingguNamaText = mingguNama[i];
+        const nilai = rencanaKerja[minggu] || "";
+        
         html += '<div class="rencana-group">';
         html += '<div class="rencana-group-header" onclick="toggleRencanaGroup(this)">';
-        html += '<div class="rencana-week">' + mingguNama[i] + '</div>';
+        html += '<div class="rencana-week">' + mingguNamaText + '</div>';
         html += '<button class="btn-expand"><i class="fas fa-chevron-down"></i></button>';
         html += '</div>';
         html += '<div class="rencana-group-body">';
-        html += '<textarea id="rencana_' + mingguList[i] + '" class="rencana-text" rows="3" placeholder="Tulis rencana pekerjaan...">' + escapeHtml(rencanaKerja[mingguList[i]] || "") + '</textarea>';
+        html += '<textarea id="rencana_' + minggu + '" class="rencana-text" rows="3" placeholder="Tulis rencana pekerjaan untuk ' + mingguNamaText + '...">' + escapeHtml(nilai) + '</textarea>';
         html += '</div>';
         html += '</div>';
     }
@@ -163,6 +85,7 @@ function toggleRencanaGroup(element) {
     const group = element.closest('.rencana-group');
     const body = group.querySelector('.rencana-group-body');
     const icon = group.querySelector('.btn-expand i');
+    
     if (body.style.display === "none") {
         body.style.display = "block";
         icon.className = "fas fa-chevron-down";
@@ -174,22 +97,30 @@ function toggleRencanaGroup(element) {
 
 function simpanRencana() {
     const mingguList = ["m8", "m9", "m10", "m11", "m12", "m13", "m14"];
-    mingguList.forEach(m => {
+    for (let i = 0; i < mingguList.length; i++) {
+        const m = mingguList[i];
         const textarea = document.getElementById("rencana_" + m);
         if (textarea) rencanaKerja[m] = textarea.value;
-    });
-    saveRencanaKerja();
+    }
+    saveData();
     renderTimelinePage();
     alert("Rencana pekerjaan berhasil disimpan!");
 }
 
+// ==================== JOBDESK ====================
 function renderFullJobdesk() {
     const container = document.getElementById("jobListFull");
     if (!container) return;
     container.innerHTML = "";
     
-    for (const job of jobdeskData) {
-        let picHtml = job.pic.map(p => '<span class="pic-badge"><i class="fas fa-user"></i> ' + escapeHtml(p) + '</span>').join("");
+    for (let i = 0; i < jobdeskData.length; i++) {
+        const job = jobdeskData[i];
+        
+        let picHtml = "";
+        for (let j = 0; j < job.pic.length; j++) {
+            picHtml += '<span class="pic-badge"><i class="fas fa-user"></i> ' + escapeHtml(job.pic[j]) + '</span>';
+        }
+        
         const hasNote = job.catatan && job.catatan.trim() !== "";
         
         const card = document.createElement("div");
@@ -198,7 +129,7 @@ function renderFullJobdesk() {
             '<div style="flex:1">' +
             '<div class="job-title">' +
             '<i class="fas fa-anchor"></i> ' + escapeHtml(job.nama) +
-            '<button class="note-btn ' + (hasNote ? "has-note" : "") + '" onclick="openNoteModal(\'' + job.id + '\')">' +
+            '<button class="note-btn ' + (hasNote ? "has-note" : "") + '" onclick="openNoteModal(' + job.id + ')">' +
             '<i class="fas ' + (hasNote ? "fa-pen" : "fa-pen-fancy") + '"></i> ' + (hasNote ? "Edit Catatan" : "Tambah Catatan") +
             '</button>' +
             '</div>' +
@@ -207,8 +138,8 @@ function renderFullJobdesk() {
             (hasNote ? '<div class="note-display">📝 <strong>Catatan:</strong> ' + escapeHtml(job.catatan) + '</div>' : '') +
             '</div>' +
             '<div class="job-actions">' +
-            '<button class="action-btn" onclick="editJob(\'' + job.id + '\')"><i class="fas fa-edit"></i> Edit</button>' +
-            '<button class="action-btn danger" onclick="deleteJob(\'' + job.id + '\')"><i class="fas fa-trash"></i> Hapus</button>' +
+            '<button class="action-btn" onclick="editJob(' + job.id + ')"><i class="fas fa-edit"></i> Edit</button>' +
+            '<button class="action-btn danger" onclick="deleteJob(' + job.id + ')"><i class="fas fa-trash"></i> Hapus</button>' +
             '</div>' +
             '</div>';
         container.appendChild(card);
@@ -216,6 +147,7 @@ function renderFullJobdesk() {
     document.getElementById("jobCount2").innerHTML = jobdeskData.length + " items";
 }
 
+// ==================== TIMELINE ====================
 function renderTimelinePage() {
     const container = document.getElementById("timelineDetailedTable");
     if (!container) return;
@@ -223,14 +155,23 @@ function renderTimelinePage() {
     const mingguList = ["m8", "m9", "m10", "m11", "m12", "m13", "m14"];
     const mingguNama = ["Minggu 8", "Minggu 9", "Minggu 10", "Minggu 11", "Minggu 12", "Minggu 13", "Minggu 14"];
     
-    let html = '<div class="timeline-table-container"><table class="timeline-table"><thead><tr><th class="col-minggu">Minggu</th><th class="col-rencana">Rencana Pekerjaan</th></tr></thead><tbody>';
+    let html = '<div class="timeline-table-container"><table class="timeline-table"><thead>';
+    html += '<tr><th class="col-minggu">Minggu</th><th class="col-rencana">Rencana Pekerjaan</th></tr>';
+    html += '</thead><tbody>';
+    
     for (let i = 0; i < mingguList.length; i++) {
-        html += '<tr><td class="col-minggu"><strong>' + mingguNama[i] + '</strong></td><td class="col-rencana">' + escapeHtml(rencanaKerja[mingguList[i]] || "-") + '</td>' + '';
+        const rencana = rencanaKerja[mingguList[i]] || "-";
+        html += '<tr>';
+        html += '<td class="col-minggu"><strong>' + mingguNama[i] + '</strong></td>';
+        html += '<td class="col-rencana">' + escapeHtml(rencana) + '</div></td>';
+        html += '</tr>';
     }
+    
     html += '</tbody></table></div>';
     container.innerHTML = html;
 }
 
+// ==================== ANGGOTA ====================
 function renderAnggota() {
     const container = document.getElementById("anggotaListFull");
     if (!container) return;
@@ -238,22 +179,23 @@ function renderAnggota() {
     const avatarList = [
         { bg: "linear-gradient(135deg, #3b82f6, #8b5cf6)", icon: "fas fa-user-astronaut" },
         { bg: "linear-gradient(135deg, #10b981, #34d399)", icon: "fas fa-user-ninja" },
-        { bg: "linear-gradient(135deg, #f59e0b, #ef4444)", icon: "fas fa-user-secret" },
-        { bg: "linear-gradient(135deg, #ec4899, #8b5cf6)", icon: "fas fa-user-graduate" },
-        { bg: "linear-gradient(135deg, #06b6d4, #3b82f6)", icon: "fas fa-user-tie" },
-        { bg: "linear-gradient(135deg, #8b5cf6, #ec4899)", icon: "fas fa-user-circle" }
+        { bg: "linear-gradient(135deg, #f59e0b, #ef4444)", icon: "fas fa-user-secret" }
     ];
     
     const anggotaMap = new Map();
-    for (const job of jobdeskData) {
-        for (const p of job.pic) {
-            let nama = p.trim();
+    for (let i = 0; i < jobdeskData.length; i++) {
+        const job = jobdeskData[i];
+        for (let j = 0; j < job.pic.length; j++) {
+            let nama = job.pic[j].trim();
             if (!anggotaMap.has(nama)) anggotaMap.set(nama, []);
             anggotaMap.get(nama).push(job.nama);
         }
     }
     
-    const sorted = Array.from(anggotaMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    const sorted = Array.from(anggotaMap.entries()).sort(function(a, b) {
+        return a[0].localeCompare(b[0]);
+    });
+    
     if (sorted.length === 0) {
         container.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;"><i class="fas fa-users" style="font-size:48px;margin-bottom:16px;opacity:0.5;"></i><p>Belum ada anggota</p></div>';
         document.getElementById("anggotaCount").innerHTML = "0 anggota";
@@ -262,41 +204,108 @@ function renderAnggota() {
     
     let idx = 0;
     let html = "";
-    for (const [nama, tugas] of sorted) {
+    for (let i = 0; i < sorted.length; i++) {
+        const nama = sorted[i][0];
+        const tugas = sorted[i][1];
         const avatar = avatarList[idx % avatarList.length];
-        html += '<div class="anggota-card">' +
-            '<div class="anggota-avatar" style="background:' + avatar.bg + '"><i class="' + avatar.icon + '"></i></div>' +
-            '<div class="anggota-info">' +
-            '<h4>' + escapeHtml(nama) + '</h4>' +
-            '<div class="anggota-tugas">' + tugas.map(t => '<span class="tugas-badge">' + escapeHtml(t) + '</span>').join("") + '</div>' +
-            '<div class="anggota-stats"><span class="job-count"><i class="fas fa-briefcase"></i> ' + tugas.length + ' Jobdesk</span></div>' +
-            '</div></div>';
+        let tugasHtml = "";
+        for (let j = 0; j < tugas.length; j++) {
+            tugasHtml += '<span class="tugas-badge">' + escapeHtml(tugas[j]) + '</span>';
+        }
+        html += '<div class="anggota-card">';
+        html += '<div class="anggota-avatar" style="background:' + avatar.bg + '"><i class="' + avatar.icon + '"></i></div>';
+        html += '<div class="anggota-info">';
+        html += '<h4>' + escapeHtml(nama) + '</h4>';
+        html += '<div class="anggota-tugas">' + tugasHtml + '</div>';
+        html += '<div class="anggota-stats"><span class="job-count"><i class="fas fa-briefcase"></i> ' + tugas.length + ' Jobdesk</span></div>';
+        html += '</div></div>';
         idx++;
     }
     container.innerHTML = html;
     document.getElementById("anggotaCount").innerHTML = sorted.length + " anggota";
 }
 
-function updateStats() {
-    const anggotaSet = new Set();
-    for (const job of jobdeskData) {
-        for (const p of job.pic) anggotaSet.add(p.trim());
+// ==================== CRUD ====================
+function tambahJobdesk() {
+    const picInput = document.getElementById("namaAnggota")?.value.trim();
+    const jenis = document.getElementById("jenisPekerjaan")?.value.trim();
+    const detail = document.getElementById("detailTugas")?.value.trim();
+    
+    if (!picInput || !jenis || !detail) {
+        alert("Harap isi semua field!");
+        return;
     }
-    document.getElementById("totalAnggota").innerText = anggotaSet.size;
-    document.getElementById("totalJob").innerText = jobdeskData.length;
-    document.getElementById("persenProgress").innerText = "0%";
-    document.getElementById("taskSelesai").innerText = "0";
+    
+    const newJob = {
+        id: Date.now(),
+        nama: jenis,
+        detail: detail,
+        pic: picInput.split(",").map(function(p) { return p.trim(); }),
+        catatan: ""
+    };
+    
+    jobdeskData.push(newJob);
+    saveData();
+    renderFullJobdesk();
+    renderAnggota();
+    updateStats();
+    
+    document.getElementById("namaAnggota").value = "";
+    document.getElementById("jenisPekerjaan").value = "";
+    document.getElementById("detailTugas").value = "";
+    
+    alert("Jobdesk baru berhasil ditambahkan!");
 }
 
-// ==================== MODAL ====================
+function editJob(jobId) {
+    const job = jobdeskData.find(function(j) { return j.id === jobId; });
+    if (!job) return;
+    
+    const newNama = prompt("Edit Jobdesk:", job.nama);
+    if (newNama && newNama.trim()) job.nama = newNama;
+    const newDetail = prompt("Edit Detail Tugas:", job.detail);
+    if (newDetail && newDetail.trim()) job.detail = newDetail;
+    const newPic = prompt("Edit PIC (pisah koma):", job.pic.join(", "));
+    if (newPic && newPic.trim()) job.pic = newPic.split(",").map(function(p) { return p.trim(); });
+    
+    saveData();
+    renderFullJobdesk();
+    renderAnggota();
+    updateStats();
+    alert("Jobdesk berhasil diperbarui!");
+}
+
+function deleteJob(jobId) {
+    if (!confirm("Hapus jobdesk ini?")) return;
+    jobdeskData = jobdeskData.filter(function(j) { return j.id !== jobId; });
+    saveData();
+    renderFullJobdesk();
+    renderAnggota();
+    updateStats();
+    alert("Jobdesk berhasil dihapus!");
+}
+
 function openNoteModal(jobId) {
-    const job = jobdeskData.find(j => j.id === jobId);
+    const job = jobdeskData.find(function(j) { return j.id === jobId; });
     if (job) {
         document.getElementById("noteJobTitle").innerHTML = '<i class="fas fa-briefcase"></i> ' + escapeHtml(job.nama);
         document.getElementById("noteText").value = job.catatan || "";
         document.getElementById("noteModal").style.display = "flex";
         window.currentNoteId = jobId;
     }
+}
+
+function saveNote() {
+    if (window.currentNoteId) {
+        const job = jobdeskData.find(function(j) { return j.id === window.currentNoteId; });
+        if (job) {
+            job.catatan = document.getElementById("noteText").value;
+            saveData();
+            renderFullJobdesk();
+            alert("Catatan berhasil disimpan!");
+        }
+    }
+    closeModal();
 }
 
 function closeModal() {
@@ -307,7 +316,10 @@ function closeModal() {
 // ==================== NAVIGASI ====================
 function navigateTo(page) {
     const pages = ["dashboardPage", "jobdeskPage", "timelinePage", "anggotaPage"];
-    for (const p of pages) document.getElementById(p).style.display = "none";
+    for (let i = 0; i < pages.length; i++) {
+        const el = document.getElementById(pages[i]);
+        if (el) el.style.display = "none";
+    }
     
     const title = document.getElementById("pageTitle");
     const subtitle = document.getElementById("pageSubtitle");
@@ -335,22 +347,32 @@ function navigateTo(page) {
         renderAnggota();
     }
     
-    document.querySelectorAll(".nav-item").forEach(item => {
-        if (item.getAttribute("data-page") === page) item.classList.add("active");
-        else item.classList.remove("active");
-    });
+    const navItems = document.querySelectorAll(".nav-item");
+    for (let i = 0; i < navItems.length; i++) {
+        const item = navItems[i];
+        if (item.getAttribute("data-page") === page) {
+            item.classList.add("active");
+        } else {
+            item.classList.remove("active");
+        }
+    }
     updateDeadline();
 }
 
+// ==================== UTILITY ====================
 function escapeHtml(str) {
     if (!str) return "";
-    return str.replace(/[&<>]/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] || m));
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === "&") return "&amp;";
+        if (m === "<") return "&lt;";
+        if (m === ">") return "&gt;";
+        return m;
+    });
 }
 
 // ==================== INIT ====================
-document.addEventListener("DOMContentLoaded", () => {
-    loadRencanaKerja();
-    listenJobdesk();
+document.addEventListener("DOMContentLoaded", function() {
+    loadData();
     navigateTo("dashboard");
     updateDeadline();
     
@@ -358,13 +380,17 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("simpanRencana")?.addEventListener("click", simpanRencana);
     document.querySelector(".close-modal")?.addEventListener("click", closeModal);
     document.getElementById("cancelNote")?.addEventListener("click", closeModal);
-    document.getElementById("saveNote")?.addEventListener("click", saveNoteFromModal);
+    document.getElementById("saveNote")?.addEventListener("click", saveNote);
     
-    window.addEventListener("click", e => { if (e.target === document.getElementById("noteModal")) closeModal(); });
-    document.querySelectorAll(".nav-item").forEach(item => {
-        item.addEventListener("click", e => {
+    window.addEventListener("click", function(e) {
+        if (e.target === document.getElementById("noteModal")) closeModal();
+    });
+    
+    document.querySelectorAll(".nav-item").forEach(function(item) {
+        item.addEventListener("click", function(e) {
             e.preventDefault();
-            navigateTo(item.getAttribute("data-page"));
+            const page = item.getAttribute("data-page");
+            if (page) navigateTo(page);
         });
     });
     
