@@ -74,6 +74,7 @@ body {
     color: #64748b;
     text-decoration: none;
     transition: all 0.2s;
+    cursor: pointer;
 }
 
 .nav-item:hover {
@@ -167,7 +168,7 @@ body {
 /* STATS GRID */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 20px;
     margin-bottom: 24px;
 }
@@ -309,6 +310,7 @@ body {
 
 .rencana-group-body {
     padding: 16px;
+    display: block;
 }
 
 .rencana-text {
@@ -447,7 +449,7 @@ body {
     background: #ef4444;
 }
 
-/* TIMELINE TABLE */
+/* TIMELINE */
 .timeline-detailed-card {
     padding: 20px;
 }
@@ -689,7 +691,7 @@ body {
         width: calc(100% - 70px);
     }
     .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr;
         gap: 12px;
     }
     .col-minggu {
@@ -698,9 +700,6 @@ body {
 }
 
 @media (max-width: 768px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
     .form-body {
         flex-direction: column;
     }
