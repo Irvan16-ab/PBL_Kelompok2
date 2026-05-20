@@ -7,33 +7,6 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore.js";
-        
-        // KONFIGURASI FIREBASE ANDA - GANTI DENGAN PUNYA ANDA
-        const firebaseConfig = {
-            apiKey: "AIzaSyBc29uPHm-ASvjvwUMwAv9LcnijEIUo4Y",
-            authDomain: "pbl-workspace.firebaseapp.com",
-            projectId: "pbl-workspace",
-            storageBucket: "pbl-workspace.firebasestorage.app"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        
-        window.db = db;
-        window.collection = collection;
-        window.addDoc = addDoc;
-        window.updateDoc = updateDoc;
-        window.deleteDoc = deleteDoc;
-        window.doc = doc;
-        window.onSnapshot = onSnapshot;
-        
-        console.log("Firebase connected!");
-    </script>
 </head>
 <body>
     <div class="app-container">
@@ -70,21 +43,21 @@
             <!-- DASHBOARD PAGE -->
             <div id="dashboardPage" class="page-content">
                 <div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-icon"><i class="fas fa-users"></i></div>
-        <div class="stat-details">
-            <span class="stat-label">Total Anggota</span>
-            <h2 id="totalAnggota">0</h2>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-icon"><i class="fas fa-clipboard-list"></i></div>
-        <div class="stat-details">
-            <span class="stat-label">Total Jobdesk</span>
-            <h2 id="totalJob">0</h2>
-        </div>
-    </div>
-</div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-users"></i></div>
+                        <div class="stat-details">
+                            <span class="stat-label">Total Anggota</span>
+                            <h2 id="totalAnggota">0</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-clipboard-list"></i></div>
+                        <div class="stat-details">
+                            <span class="stat-label">Total Jobdesk</span>
+                            <h2 id="totalJob">0</h2>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="form-card">
                     <div class="form-header"><i class="fas fa-plus-circle"></i><h3>Tambah Jobdesk Baru</h3></div>
